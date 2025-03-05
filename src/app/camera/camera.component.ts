@@ -1,16 +1,15 @@
 import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { CameraService } from './services/camera.service';
-import { NgIf, NgFor } from '@angular/common';
-
 @Component({
   selector: 'app-camera',
   standalone: true,
-  imports: [NgIf, NgFor],
+  imports: [CommonModule],
   templateUrl: './camera.component.html',
   styleUrl: './camera.component.css'
 })
 export class CameraComponent {
-  cameraService: CameraService = inject(CameraService);
+  cameraService = inject(CameraService);
   imgUrl: string = '';
   errorMessage: string = '';
   loading: boolean = false;
@@ -31,12 +30,34 @@ export class CameraComponent {
       // Añadir la imagen a la galería
       this.imageGallery.unshift(this.imgUrl);
       
-      await new Promise(resolve => setTimeout(resolve, 100));
       this.loading = false;
     } catch (error) {
       console.error('Error al capturar imagen:', error);
-      this.errorMessage = String(error);
-      this.imgUrl = '';
+      this.errorMessage = error instanceof Error ? error.message : String(error);
+      this.loading = false;
+    }
+  }
+
+  async loadFromGallery() {
+    this.errorMessage = '';
+    try {
+      this.loading = true;
+      const images = await this.cameraService.getPhotosFromGallery(5);
+      
+      if (images && images.length > 0) {
+        // Añadimos las imágenes al principio de la galería
+        this.imageGallery = [...images, ...this.imageGallery];
+        
+        // Seleccionamos la primera imagen cargada
+        if (images.length > 0) {
+          this.selectImage(images[0]);
+        }
+      }
+      
+      this.loading = false;
+    } catch (error) {
+      console.error('Error al cargar imágenes:', error);
+      this.errorMessage = error instanceof Error ? error.message : String(error);
       this.loading = false;
     }
   }
@@ -58,5 +79,6 @@ export class CameraComponent {
   clearGallery() {
     this.imageGallery = [];
     this.selectedImage = null;
+    this.imgUrl = '';
   }
 }
